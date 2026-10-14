@@ -14,3 +14,19 @@ run_seq,label,run_id,rule_id,rule_name,severity,status,metric,threshold,details
 1,real,run001-real,DQ-R01,Defect-row rate within limit,blocking,PASS,0.0,0.2,"unavailable_value=191761 (unavailable_value = official StatCan suppressed/not-available markers, excluded from the rate)"
 1,real,run001-real,DQ-S01,Schema contract: required columns present,blocking,PASS,,,"measure column='Harvest disposition', crop column='Type of crop'"
 1,real,run001-real,DQ-V01,Release-to-release revisions vs published baseline,advisory,SKIP,,,No published baseline yet (first load)
+2,simulated,run002-simulated,DQ-A01,Production equals harvested area x yield (within tolerance),advisory,WARN,161.0,0.0,161 of 13468 series-years outside the 3% tolerance (floor 500 t)
+2,simulated,run002-simulated,DQ-A02,Metric area agrees with imperial area (hectares vs acres),advisory,WARN,504.0,0.0,"504 of 39907 area pairs outside the 0.5% tolerance (floor 1,000 acres)"
+2,simulated,run002-simulated,DQ-C01,Row conservation: source = loaded + reference-only + rejected,blocking,PASS,393087.0,393087.0,"loaded=106942, reference_only=94367, rejected=191778, source=393087"
+2,simulated,run002-simulated,DQ-C02,Warehouse load is not empty,blocking,PASS,106942.0,1.0,""
+2,simulated,run002-simulated,DQ-F01,Freshness: latest reference year is current,advisory,PASS,2026.0,2025.0,latest year loaded = 2026; expected at least 2025
+2,simulated,run002-simulated,DQ-H01,Provinces add up to the Canada total,advisory,WARN,321.0,0.0,"321 of 9129 totals outside the 1% tolerance (floor 1,000); suppressed provincial values can explain gaps"
+2,simulated,run002-simulated,DQ-K01,Source-to-target: staging equals warehouse (counts and sums),blocking,PASS,0.0,0.0,"staging_rows=106942, warehouse_rows=106942, measures_out_of_balance=0"
+2,simulated,run002-simulated,DQ-K02,Published report table equals warehouse (KPI reconciliation),blocking,PASS,0.0,0.0,measure columns out of balance=0
+2,simulated,run002-simulated,DQ-M01,Completeness: no unexplained missing years inside each series,advisory,WARN,3.0,0.0,"2516 series checked; 7143 missing years inside series: 7140 explained by official 'not available' markers, 3 unexplained; e.g. Ontario/Wheat, spring/production missing 1; Ontario/Oats/production missing 1; Alberta/Rye, all/production missing 1"
+2,simulated,run002-simulated,DQ-N01,Crop names not in the reference catalog,advisory,WARN,1.0,0.0,Review and add to config/crop_catalog.csv or crop_aliases.csv: Quinoa
+2,simulated,run002-simulated,DQ-N02,Inconsistent crop-name spellings standardized,advisory,INFO,2.0,,2 rows across 1 spelling variants mapped to canonical names
+2,simulated,run002-simulated,DQ-O01,Plausibility: yields near each crop's own typical level,advisory,WARN,913.0,0.0,"913 of 21875 yield values fall outside 0.1x-5.0x of the crop median; e.g. Corn for silage/Prince Edward Island/1930=2,333; Wheat, spring/Saskatchewan/1937=175; Wheat, all/Saskatchewan/1937=175. 0 rows carry the StatCan 'use with caution' (E) flag"
+2,simulated,run002-simulated,DQ-R01,Defect-row rate within limit,blocking,WARN,3.3071559222258686e-05,0.2,"unavailable_value=191765, duplicate_key=5, missing_value=4, negative_value=2, invalid_number=2 (unavailable_value = official StatCan suppressed/not-available markers, excluded from the rate)"
+2,simulated,run002-simulated,DQ-S01,Schema contract: required columns present,blocking,PASS,,,"measure column='Harvest disposition', crop column='Type of crop'"
+2,simulated,run002-simulated,DQ-V01,Release-to-release revisions vs published baseline,advisory,WARN,14.0,,"vs snapshot e85ff9256414: values changed=14, rows added=13, rows dropped=10"
+3,simulated,run003-simulated,DQ-S01,Schema contract: required columns present,blocking,FAIL,,,Missing required columns: <crop column such as 'Type of crop'>

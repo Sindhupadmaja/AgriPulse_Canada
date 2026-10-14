@@ -1,1 +1,14 @@
 run_seq,label,run_id,source_row,reason,detail,ref_date,geo,crop,measure,uom,value_raw
+2,simulated,run002-simulated,31735,missing_value,symbol= status=,1917,Prairie provinces,"Wheat, all",Production (bushels),Bushels,""
+2,simulated,run002-simulated,65899,negative_value,"",1927,Saskatchewan,"Rye, all",Production (bushels),Bushels,-8561
+2,simulated,run002-simulated,121691,missing_value,symbol= status=,1944,Ontario,Oats,Production (metric tonnes),Metric tonnes,""
+2,simulated,run002-simulated,160065,invalid_number,"",1955,Alberta,"Rye, all",Production (metric tonnes),Metric tonnes,abc
+2,simulated,run002-simulated,284065,missing_value,symbol= status=,1993,Ontario,"Wheat, spring",Production (metric tonnes),Metric tonnes,""
+2,simulated,run002-simulated,312978,missing_value,symbol= status=,2002,Alberta,Flaxseed,Production (bushels),Bushels,""
+2,simulated,run002-simulated,342723,negative_value,"",2012,Prairie provinces,Triticale,Production (bushels),Bushels,-1400
+2,simulated,run002-simulated,347706,invalid_number,"",2014,Maritime provinces,"Wheat, all excluding durum wheat",Production (bushels),Bushels,abc
+2,simulated,run002-simulated,393083,duplicate_key,"",1915,Prairie provinces,"Wheat, all",Production (metric tonnes),Metric tonnes,9803000
+2,simulated,run002-simulated,393084,duplicate_key,"",1931,Nova Scotia,"Wheat, all",Production (metric tonnes),Metric tonnes,1350
+2,simulated,run002-simulated,393085,duplicate_key,"",1914,New Brunswick,Barley,Production (metric tonnes),Metric tonnes,1400
+2,simulated,run002-simulated,393086,duplicate_key,"",1976,Ontario,Corn for grain,Production (bushels),Bushels,134926
+2,simulated,run002-simulated,393087,duplicate_key,"",1986,Prince Edward Island,Tame hay,Production (tons),Tons,267

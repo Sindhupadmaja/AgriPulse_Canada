@@ -1,2 +1,7 @@
 run_seq,label,run_id,reason,rows
 1,real,run001-real,unavailable_value,191761
+2,simulated,run002-simulated,unavailable_value,191765
+2,simulated,run002-simulated,duplicate_key,5
+2,simulated,run002-simulated,missing_value,4
+2,simulated,run002-simulated,negative_value,2
+2,simulated,run002-simulated,invalid_number,2
