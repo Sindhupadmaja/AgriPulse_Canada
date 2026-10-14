@@ -16,7 +16,8 @@ AUDIT = {
                                FROM audit_rejected_records r JOIN audit_load_log l USING (run_id)
                                GROUP BY ALL ORDER BY l.run_seq, rows DESC""",
     "audit_rejected_records": """SELECT l.run_seq, l.label, r.* FROM audit_rejected_records r
-                                 JOIN audit_load_log l USING (run_id) ORDER BY l.run_seq, r.source_row""",
+                                 JOIN audit_load_log l USING (run_id) WHERE r.reason <> 'unavailable_value'
+                                 ORDER BY l.run_seq, r.source_row""",
 }
 
 

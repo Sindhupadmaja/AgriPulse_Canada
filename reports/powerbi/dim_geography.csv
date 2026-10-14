@@ -1,0 +1,16 @@
+geo_key,geo_name,geo_level
+1,Canada,Canada
+2,Alberta,Province/Territory
+3,British Columbia,Province/Territory
+4,Manitoba,Province/Territory
+5,New Brunswick,Province/Territory
+6,Newfoundland and Labrador,Province/Territory
+7,Nova Scotia,Province/Territory
+8,Ontario,Province/Territory
+9,Prince Edward Island,Province/Territory
+10,Quebec,Province/Territory
+11,Saskatchewan,Province/Territory
+12,East,Region
+13,Maritime provinces,Region
+14,Prairie provinces,Region
+15,West,Region

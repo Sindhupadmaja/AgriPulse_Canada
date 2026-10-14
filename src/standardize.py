@@ -44,8 +44,16 @@ def detect_columns(columns):
     }
 
 
+def _slug(text):
+    return re.sub(r"[^a-z0-9]+", "_", str(text).lower()).strip("_")
+
+
 def parse_measure(label, uom):
-    """Return (measure_code, unit_code, unit_system) or (None, None, None)."""
+    """Return (measure_code, unit_code, unit_system) or (None, None, None).
+
+    The six metric units used by the warehouse get fixed codes; every other unit (imperial
+    or otherwise) gets its own code so different imperial units never collide.
+    """
     text = f"{label} {uom}".lower()
     if "harvested" in text and "area" in text:
         measure = "harvested_area"
@@ -61,32 +69,23 @@ def parse_measure(label, uom):
         measure = "farm_value"
     else:
         return (None, None, None)
-    s = f"{uom} {label}".lower()
-    if "kilogram" in s and "hectare" in s:
-        unit = ("kg_ha", "metric")
-    elif "bushel" in s and "acre" in s:
-        unit = ("bu_ac", "imperial")
-    elif "tonne" in s and "hectare" in s and "per" in s:
-        unit = ("t_ha", "metric")
-    elif "tonne" in s and "acre" in s and "per" in s:
-        unit = ("t_ac", "imperial")
-    elif "dollar" in s and "tonne" in s:
-        unit = ("dollars_per_tonne", "metric")
-    elif "dollar" in s and "bushel" in s:
-        unit = ("dollars_per_bushel", "imperial")
-    elif "dollar" in s:
-        unit = ("dollars", "neutral")
-    elif "bushel" in s:
-        unit = ("bushels", "imperial")
-    elif "tonne" in s:
-        unit = ("tonnes", "metric")
-    elif "hectare" in s:
-        unit = ("hectares", "metric")
-    elif "acre" in s:
-        unit = ("acres", "imperial")
-    else:
-        unit = ("unknown", "unknown")
-    return (measure, unit[0], unit[1])
+    unit_text = str(uom).strip().lower()
+    if not unit_text:
+        found = re.search(r"\(([^)]*)\)", str(label))
+        unit_text = found.group(1).strip().lower() if found else ""
+    if "kilogram" in unit_text and "hectare" in unit_text and "per" in unit_text:
+        return (measure, "kg_ha", "metric")
+    if "tonne" in unit_text and "dollar" in unit_text:
+        return (measure, "dollars_per_tonne", "metric")
+    if unit_text in ("hectares", "hectare"):
+        return (measure, "hectares", "metric")
+    if unit_text in ("metric tonnes", "tonnes", "tonne", "metric tonne"):
+        return (measure, "tonnes", "metric")
+    if unit_text == "dollars":
+        return (measure, "dollars", "neutral")
+    system = "imperial" if any(w in unit_text for w in ("acre", "pound", "ton", "bushel", "hundredweight")) \
+        else "other"
+    return (measure, _slug(unit_text) or "unknown", system)
 
 
 def geo_level(name):
@@ -157,7 +156,9 @@ def standardize(raw, cols, catalog, aliases):
     assign(df["year"].isna(), "invalid_year")
     assign((df["geo"] == "") | (df["crop_clean"] == ""), "missing_dimension")
     assign(df["measure"].isna(), "unmapped_measure")
-    assign(blank, "missing_value")
+    has_symbol = (df["symbol_raw"].astype(str).str.strip() != "") | (df["status_raw"].astype(str).str.strip() != "")
+    assign(blank & has_symbol, "unavailable_value")   # official StatCan marker: suppressed / not available
+    assign(blank, "missing_value")                    # blank with no explanation: a real defect
     assign(invalid, "invalid_number")
     assign(df["value"] < 0, "negative_value")
 
@@ -168,7 +169,7 @@ def standardize(raw, cols, catalog, aliases):
 
     bad = reason != ""
     detail = pd.Series("", index=df.index, dtype="object")
-    missing = reason == "missing_value"
+    missing = reason.isin(["missing_value", "unavailable_value"])
     detail.loc[missing] = ("symbol=" + df.loc[missing, "symbol_raw"].astype(str)
                            + " status=" + df.loc[missing, "status_raw"].astype(str))
     rejected = df.loc[bad, ["source_row", "year_raw", "geo_raw", "crop_raw", "measure_raw",
@@ -181,25 +182,25 @@ def standardize(raw, cols, catalog, aliases):
     acc["year"] = acc["year"].astype("int64")
     acc["geo_level"] = _map_unique(acc["geo"], geo_level) if len(acc) else ""
     status = acc["status_raw"].astype(str).str.strip()
-    limit = acc["unit"].map(config.YIELD_LIMITS)
-    out_of_range = limit.notna() & ((acc["value"] <= 0) | (acc["value"] > limit))
 
     def flag(mask, text):
         return pd.Series(np.where(mask, text, ""), index=acc.index, dtype="object")
 
     flags = (flag(acc["standardized_name"], "standardized_name;")
              + flag(acc["new_crop"], "new_crop;")
-             + flag(status.eq("E"), "use_with_caution;")
-             + flag(out_of_range, "out_of_range;"))
+             + flag(status.eq("E"), "use_with_caution;"))
     acc["quality_flags"] = flags.str.rstrip(";")
     acc["status_flag"] = status
 
     pair = pd.Series([(m, u) in config.FACT_UNITS for m, u in zip(acc["measure"], acc["unit"])],
                      index=acc.index, dtype=bool)
+    unavailable = df.loc[reason == "unavailable_value", ["year", "geo", "crop", "measure", "unit"]].copy()
+    unavailable["year"] = unavailable["year"].astype("int64")
     keep = ["source_row", "year", "geo", "geo_level", "crop", "crop_raw", "measure", "unit",
             "unit_system", "value", "status_flag", "quality_flags"]
     return {
         "fact": acc.loc[pair, keep].reset_index(drop=True),
         "reference": acc.loc[~pair, keep].reset_index(drop=True),
         "rejected": rejected.reset_index(drop=True),
+        "unavailable": unavailable.reset_index(drop=True),
     }

@@ -32,18 +32,21 @@ def run_checks(con, ctx):
         "No rows matched the expected metric measures; run the profile step and check measure labels"
         if ctx["rows_fact"] == 0 else ""))
 
-    rate = ctx["rows_rejected"] / ctx["rows_source"] if ctx["rows_source"] else 0
+    defects = ctx["rows_rejected"] - ctx["rows_unavailable"]
+    rate = defects / ctx["rows_source"] if ctx["rows_source"] else 0
     reasons = con.execute(
         "SELECT reason, COUNT(*) FROM audit_rejected_records WHERE run_id = ? GROUP BY 1 ORDER BY 2 DESC",
         [ctx["run_id"]]).fetchall()
     detail = ", ".join(f"{r}={n}" for r, n in reasons) or "no rejected rows"
+    if ctx["rows_unavailable"]:
+        detail += " (unavailable_value = official StatCan suppressed/not-available markers, excluded from the rate)"
     if rate > config.MAX_REJECT_RATE:
         status = "FAIL"
-    elif ctx["rows_rejected"] > 0:
+    elif defects > 0:
         status = "WARN"
     else:
         status = "PASS"
-    out.append(result("DQ-R01", "Rejected-row rate within limit", "blocking", status,
+    out.append(result("DQ-R01", "Defect-row rate within limit", "blocking", status,
                       rate, config.MAX_REJECT_RATE, detail))
 
     new_crops = con.execute(
@@ -61,19 +64,30 @@ def run_checks(con, ctx):
         "INFO", std_rows, None,
         f"{std_rows} rows across {std_variants} spelling variants mapped to canonical names"))
 
-    gaps, series = _one(con, """
-        WITH s AS (SELECT geo, crop, measure, MIN(year) AS lo, MAX(year) AS hi, COUNT(DISTINCT year) AS n
-                   FROM stg_fact GROUP BY geo, crop, measure)
-        SELECT COALESCE(SUM((hi - lo + 1) - n), 0), COUNT(*) FROM s""")
-    examples = con.execute("""
-        WITH s AS (SELECT geo, crop, measure, (MAX(year) - MIN(year) + 1) - COUNT(DISTINCT year) AS g
-                   FROM stg_fact GROUP BY geo, crop, measure)
-        SELECT geo, crop, measure, g FROM s WHERE g > 0 ORDER BY g DESC LIMIT 3""").fetchall()
+    con.execute("""
+        CREATE OR REPLACE TEMP TABLE _gaps AS
+        WITH s AS (SELECT geo, crop, measure, unit, MIN(year) AS lo, MAX(year) AS hi
+                   FROM stg_fact GROUP BY geo, crop, measure, unit),
+             yrs AS (SELECT s.geo, s.crop, s.measure, s.unit, t.year
+                     FROM s, generate_series(s.lo, s.hi) AS t(year)),
+             u AS (SELECT DISTINCT geo, crop, measure, unit, year FROM stg_unavailable)
+        SELECT y.geo, y.crop, y.measure, y.unit, y.year, (u.year IS NOT NULL) AS explained
+        FROM yrs y
+        LEFT JOIN stg_fact f ON f.geo = y.geo AND f.crop = y.crop AND f.measure = y.measure
+                            AND f.unit = y.unit AND f.year = y.year
+        LEFT JOIN u ON u.geo = y.geo AND u.crop = y.crop AND u.measure = y.measure
+                   AND u.unit = y.unit AND u.year = y.year
+        WHERE f.year IS NULL""")
+    series = _one(con, "SELECT COUNT(*) FROM (SELECT DISTINCT geo, crop, measure, unit FROM stg_fact)")[0]
+    total_missing, unexplained = _one(con, "SELECT COUNT(*), COUNT(*) FILTER (WHERE NOT explained) FROM _gaps")
+    examples = con.execute("""SELECT geo, crop, measure, COUNT(*) AS n FROM _gaps WHERE NOT explained
+                              GROUP BY ALL ORDER BY n DESC LIMIT 3""").fetchall()
     out.append(result(
-        "DQ-M01", "Completeness: no missing years inside each series", "advisory",
-        "WARN" if gaps else "PASS", gaps, 0,
-        f"{series} series checked" + ("; e.g. " + "; ".join(f"{g}/{c}/{m} missing {n}" for g, c, m, n in examples)
-                                       if examples else "")))
+        "DQ-M01", "Completeness: no unexplained missing years inside each series", "advisory",
+        "WARN" if unexplained else "PASS", unexplained, 0,
+        f"{series} series checked; {total_missing} missing years inside series: "
+        f"{total_missing - unexplained} explained by official 'not available' markers, {unexplained} unexplained"
+        + ("; e.g. " + "; ".join(f"{g}/{c}/{m} missing {n}" for g, c, m, n in examples) if examples else "")))
 
     tol, floor = config.ARITHMETIC_TOLERANCE, config.ARITHMETIC_ABS_FLOOR_TONNES
     checked, bad = _one(con, f"""
@@ -86,7 +100,8 @@ def run_checks(con, ctx):
         FROM p JOIN a USING (year, geo, crop) JOIN y USING (year, geo, crop)""")
     out.append(result(
         "DQ-A01", "Production equals harvested area x yield (within tolerance)", "advisory",
-        "WARN" if bad else "PASS", bad, 0, f"{checked} series-years checked, tolerance {tol:.0%}"))
+        "WARN" if bad else "PASS", bad, 0,
+        f"{bad} of {checked} series-years outside the {tol:.0%} tolerance (floor {floor:,} t)"))
 
     atol, afloor, k = config.AREA_TOLERANCE, config.AREA_ABS_FLOOR_ACRES, config.ACRES_PER_HECTARE
     checked, bad = _one(con, f"""
@@ -99,7 +114,8 @@ def run_checks(con, ctx):
     out.append(result(
         "DQ-A02", "Metric area agrees with imperial area (hectares vs acres)", "advisory",
         "WARN" if bad else ("PASS" if checked else "SKIP"), bad, 0,
-        f"{checked} area pairs compared" if checked else "No imperial area rows found"))
+        f"{bad} of {checked} area pairs outside the {atol:.1%} tolerance (floor {afloor:,} acres)"
+        if checked else "No imperial area rows found"))
 
     htol, hfloor = config.HIERARCHY_TOLERANCE, config.HIERARCHY_ABS_FLOOR
     measures = ",".join(f"'{m}'" for m in config.ADDITIVE_MEASURES)
@@ -114,15 +130,28 @@ def run_checks(con, ctx):
     out.append(result(
         "DQ-H01", "Provinces add up to the Canada total", "advisory",
         "WARN" if bad else ("PASS" if checked else "SKIP"), bad, 0,
-        f"{checked} crop-year-measure totals compared, tolerance {htol:.0%} "
-        "(suppressed provincial values can explain gaps)" if checked else "No Canada rows to compare"))
+        f"{bad} of {checked} totals outside the {htol:.0%} tolerance (floor {hfloor:,}); "
+        "suppressed provincial values can explain gaps" if checked else "No Canada rows to compare"))
 
-    flagged = _one(con, "SELECT COUNT(*) FROM stg_fact WHERE quality_flags LIKE '%out_of_range%'")[0]
+    low, high = config.YIELD_OUTLIER_LOW, config.YIELD_OUTLIER_HIGH
+    outlier_sql = f"""
+        FROM stg_fact f
+        JOIN (SELECT crop, quantile_cont(value, 0.5) AS med FROM stg_fact
+              WHERE measure = 'yield' AND value > 0 GROUP BY crop) m USING (crop)
+        WHERE f.measure = 'yield'"""
+    checked = _one(con, "SELECT COUNT(*) " + outlier_sql)[0]
+    flagged = _one(con, f"SELECT COUNT(*) {outlier_sql} AND (f.value <= 0 OR f.value > {high} * m.med "
+                        f"OR f.value < {low} * m.med)")[0]
+    examples = con.execute(f"""SELECT f.crop, f.geo, f.year, f.value {outlier_sql}
+        AND (f.value <= 0 OR f.value > {high} * m.med OR f.value < {low} * m.med)
+        ORDER BY f.value / m.med DESC LIMIT 3""").fetchall()
     caution = _one(con, "SELECT COUNT(*) FROM stg_fact WHERE quality_flags LIKE '%use_with_caution%'")[0]
     out.append(result(
-        "DQ-O01", "Plausibility: yields inside expected range", "advisory",
+        "DQ-O01", "Plausibility: yields near each crop's own typical level", "advisory",
         "WARN" if flagged else "PASS", flagged, 0,
-        f"{caution} rows carry the StatCan 'use with caution' (E) flag"))
+        f"{flagged} of {checked} yield values fall outside {low}x-{high}x of the crop median"
+        + ("; e.g. " + "; ".join(f"{c}/{g}/{y}={v:,.0f}" for c, g, y, v in examples) if examples else "")
+        + f". {caution} rows carry the StatCan 'use with caution' (E) flag"))
 
     max_year = _one(con, "SELECT MAX(year) FROM stg_fact")[0]
     needed = ctx["now"].year - 1

@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS audit_load_log (
     run_seq INTEGER, run_id VARCHAR, label VARCHAR, snapshot_id VARCHAR, source_file VARCHAR,
     source_sha256 VARCHAR, started_at TIMESTAMP, finished_at TIMESTAMP, status VARCHAR,
     published BOOLEAN, rows_source BIGINT, rows_loaded BIGINT, rows_reference_only BIGINT,
-    rows_rejected BIGINT, rows_flagged BIGINT, checks_passed INTEGER, checks_warned INTEGER,
+    rows_rejected BIGINT, rows_unavailable BIGINT, rows_flagged BIGINT, checks_passed INTEGER, checks_warned INTEGER,
     checks_failed INTEGER, message VARCHAR
 );
 CREATE TABLE IF NOT EXISTS audit_dq_results (

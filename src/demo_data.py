@@ -79,8 +79,8 @@ def inject_row_defects(df, seed=7):
     acres = measure.str.contains("harvested area") & measure.str.contains("acre")
     for i in pick(acres, 1):                      # breaks hectares-vs-acres check
         df.loc[i, "VALUE"] = str(round(float(df.loc[i, "VALUE"]) * 1.2))
-    for i in pick(prod, 8):                       # missing / suppressed values
-        df.loc[i, ["VALUE", "SYMBOL"]] = ["", ".."]
+    for n, i in enumerate(pick(prod, 8)):         # 4 official "not available", 4 unexplained blanks
+        df.loc[i, ["VALUE", "SYMBOL"]] = ["", ".." if n < 4 else ""]
     for i in pick(prod, 2):                       # negative values
         df.loc[i, "VALUE"] = "-" + df.loc[i, "VALUE"]
     for i in pick(prod, 2):                       # non-numeric values

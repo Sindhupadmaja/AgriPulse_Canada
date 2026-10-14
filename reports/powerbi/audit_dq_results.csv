@@ -1,0 +1,16 @@
+run_seq,label,run_id,rule_id,rule_name,severity,status,metric,threshold,details
+1,real,run001-real,DQ-A01,Production equals harvested area x yield (within tolerance),advisory,WARN,160.0,0.0,160 of 13471 series-years outside the 3% tolerance (floor 500 t)
+1,real,run001-real,DQ-A02,Metric area agrees with imperial area (hectares vs acres),advisory,WARN,504.0,0.0,"504 of 39907 area pairs outside the 0.5% tolerance (floor 1,000 acres)"
+1,real,run001-real,DQ-C01,Row conservation: source = loaded + reference-only + rejected,blocking,PASS,393079.0,393079.0,"loaded=106946, reference_only=94372, rejected=191761, source=393079"
+1,real,run001-real,DQ-C02,Warehouse load is not empty,blocking,PASS,106946.0,1.0,""
+1,real,run001-real,DQ-F01,Freshness: latest reference year is current,advisory,PASS,2026.0,2025.0,latest year loaded = 2026; expected at least 2025
+1,real,run001-real,DQ-H01,Provinces add up to the Canada total,advisory,WARN,318.0,0.0,"318 of 9129 totals outside the 1% tolerance (floor 1,000); suppressed provincial values can explain gaps"
+1,real,run001-real,DQ-K01,Source-to-target: staging equals warehouse (counts and sums),blocking,PASS,0.0,0.0,"staging_rows=106946, warehouse_rows=106946, measures_out_of_balance=0"
+1,real,run001-real,DQ-K02,Published report table equals warehouse (KPI reconciliation),blocking,PASS,0.0,0.0,measure columns out of balance=0
+1,real,run001-real,DQ-M01,Completeness: no unexplained missing years inside each series,advisory,PASS,0.0,0.0,"2515 series checked; 7138 missing years inside series: 7138 explained by official 'not available' markers, 0 unexplained"
+1,real,run001-real,DQ-N01,Crop names not in the reference catalog,advisory,PASS,0.0,0.0,""
+1,real,run001-real,DQ-N02,Inconsistent crop-name spellings standardized,advisory,INFO,0.0,,0 rows across 0 spelling variants mapped to canonical names
+1,real,run001-real,DQ-O01,Plausibility: yields near each crop's own typical level,advisory,WARN,913.0,0.0,"913 of 21875 yield values fall outside 0.1x-5.0x of the crop median; e.g. Corn for silage/Prince Edward Island/1930=2,333; Wheat, spring/Saskatchewan/1937=175; Wheat, all/Saskatchewan/1937=175. 0 rows carry the StatCan 'use with caution' (E) flag"
+1,real,run001-real,DQ-R01,Defect-row rate within limit,blocking,PASS,0.0,0.2,"unavailable_value=191761 (unavailable_value = official StatCan suppressed/not-available markers, excluded from the rate)"
+1,real,run001-real,DQ-S01,Schema contract: required columns present,blocking,PASS,,,"measure column='Harvest disposition', crop column='Type of crop'"
+1,real,run001-real,DQ-V01,Release-to-release revisions vs published baseline,advisory,SKIP,,,No published baseline yet (first load)

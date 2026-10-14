@@ -20,7 +20,8 @@ AREA_ABS_FLOOR_ACRES = 1000
 HIERARCHY_TOLERANCE = 0.01           # sum of provinces vs Canada total
 HIERARCHY_ABS_FLOOR = 1000
 ACRES_PER_HECTARE = 2.471053814671653
-YIELD_LIMITS = {"kg_ha": 25000, "bu_ac": 400}  # plausibility ceilings
+YIELD_OUTLIER_LOW = 0.1               # yield below this multiple of the crop median is flagged
+YIELD_OUTLIER_HIGH = 5.0              # yield above this multiple of the crop median is flagged
 
 # Metric measures loaded into the warehouse: (code, name, unit_code, unit_label)
 MEASURES = [

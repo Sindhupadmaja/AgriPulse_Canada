@@ -1,0 +1,7 @@
+measure_key,measure_code,measure_name,unit_code,unit_label
+1,seeded_area,Seeded area,hectares,ha
+2,harvested_area,Harvested area,hectares,ha
+3,yield,Average yield,kg_ha,kg/ha
+4,production,Production,tonnes,metric tonnes
+5,farm_price,Average farm price,dollars_per_tonne,$/tonne
+6,farm_value,Total farm value,dollars,$

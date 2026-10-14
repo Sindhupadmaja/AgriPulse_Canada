@@ -15,7 +15,7 @@ import pandas as pd
 
 from . import config, export, quality, warehouse
 from .catalog import load_aliases, load_or_bootstrap_catalog
-from .db import connect, init_schema, insert_df, load_staging
+from .db import connect, init_schema, insert_df, load_staging, load_unavailable
 from .standardize import SchemaError, detect_columns, standardize
 
 
@@ -52,7 +52,7 @@ def run(csv_path, label="real", db_path=None, config_dir=None, reports_dir=None,
             "source_file": csv_path.name, "source_sha256": None, "started_at": now,
             "status": "FAILED", "published": False, "message": "",
             "rows_source": 0, "rows_loaded": 0, "rows_reference_only": 0,
-            "rows_rejected": 0, "rows_flagged": 0}
+            "rows_rejected": 0, "rows_unavailable": 0, "rows_flagged": 0}
     results, rejected = [], None
 
     try:
@@ -93,17 +93,20 @@ def run(csv_path, label="real", db_path=None, config_dir=None, reports_dir=None,
 
         load_staging(con, "stg_fact", fact)
         load_staging(con, "stg_reference", reference)
+        load_unavailable(con, std["unavailable"])
         insert_df(con, "audit_rejected_records", rejected,
                   ["run_id", "source_row", "reason", "detail", "ref_date", "geo", "crop",
                    "measure", "uom", "value_raw"])
 
         info.update(rows_loaded=len(fact), rows_reference_only=len(reference),
                     rows_rejected=len(rejected),
+                    rows_unavailable=int((rejected["reason"] == "unavailable_value").sum()),
                     rows_flagged=int((fact["quality_flags"] != "").sum()))
         warehouse.build_new(con, info["snapshot_id"])
         ctx = {"run_id": run_id, "snapshot_id": info["snapshot_id"], "baseline_snapshot": baseline,
                "now": now, "rows_source": info["rows_source"], "rows_fact": len(fact),
-               "rows_reference": len(reference), "rows_rejected": len(rejected)}
+               "rows_reference": len(reference), "rows_rejected": len(rejected),
+               "rows_unavailable": info["rows_unavailable"]}
         results += quality.run_checks(con, ctx)
 
         statuses = [r["status"] for r in results]
@@ -145,7 +148,7 @@ def run(csv_path, label="real", db_path=None, config_dir=None, reports_dir=None,
         insert_df(con, "audit_load_log", log,
                   ["run_seq", "run_id", "label", "snapshot_id", "source_file", "source_sha256",
                    "started_at", "finished_at", "status", "published", "rows_source", "rows_loaded",
-                   "rows_reference_only", "rows_rejected", "rows_flagged", "checks_passed",
+                   "rows_reference_only", "rows_rejected", "rows_unavailable", "rows_flagged", "checks_passed",
                    "checks_warned", "checks_failed", "message"])
         export.export_group(con, reports_dir, export.AUDIT)
         if info["published"]:
@@ -158,7 +161,8 @@ def run(csv_path, label="real", db_path=None, config_dir=None, reports_dir=None,
 def print_summary(info):
     print(f"\nRun {info['run_id']}  |  status: {info['status']}  |  published: {info['published']}")
     print(f"  source rows {info['rows_source']:,}  loaded {info['rows_loaded']:,}  "
-          f"reference-only {info['rows_reference_only']:,}  rejected {info['rows_rejected']:,}  "
+          f"reference-only {info['rows_reference_only']:,}  rejected {info['rows_rejected']:,} "
+          f"(of which official unavailable/suppressed {info['rows_unavailable']:,})  "
           f"flagged {info['rows_flagged']:,}")
     for r in info["results"]:
         print(f"  [{r['status']:<4}] {r['rule_id']}  {r['rule_name']}")

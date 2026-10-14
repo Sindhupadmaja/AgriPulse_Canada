@@ -39,3 +39,11 @@ def load_staging(con, name, df):
     con.execute(f"DROP TABLE IF EXISTS {name}")
     con.execute(STAGING_DDL.format(name=name))
     insert_df(con, name, df)
+
+
+def load_unavailable(con, df):
+    """Keys that StatCan marks as suppressed / not available (they explain gaps in a series)."""
+    con.execute("DROP TABLE IF EXISTS stg_unavailable")
+    con.execute("""CREATE TABLE stg_unavailable (year INTEGER, geo VARCHAR, crop VARCHAR,
+                   measure VARCHAR, unit VARCHAR)""")
+    insert_df(con, "stg_unavailable", df)

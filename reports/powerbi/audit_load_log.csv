@@ -1,0 +1,2 @@
+run_seq,run_id,label,snapshot_id,source_file,source_sha256,started_at,finished_at,status,published,rows_source,rows_loaded,rows_reference_only,rows_rejected,rows_unavailable,rows_flagged,checks_passed,checks_warned,checks_failed,message
+1,run001-real,real,e85ff9256414,32100359_2026-10-14.csv,e85ff925641448ef3d8c55b1156bbb4bfcf7f23c2ac7a5aa982bea21579565fd,2026-10-14 01:42:59.30708,2026-10-14 01:43:06.734026,SUCCESS_WITH_WARNINGS,true,393079,106946,94372,191761,191761,0,9,4,0,Warehouse published

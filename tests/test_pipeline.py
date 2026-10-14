@@ -42,7 +42,7 @@ def test_row_defects_are_detected_and_not_published(clean_csv, env):
     reasons = {r[0] for r in con.execute(
         "SELECT DISTINCT reason FROM audit_rejected_records WHERE run_id = ?", [info["run_id"]]).fetchall()}
     con.close()
-    assert {"duplicate_key", "missing_value", "negative_value", "invalid_number"} <= reasons
+    assert {"duplicate_key", "missing_value", "unavailable_value", "negative_value", "invalid_number"} <= reasons
     for rule_id in ("DQ-A01", "DQ-A02", "DQ-H01", "DQ-N01"):
         assert rules[rule_id]["status"] == "WARN", (rule_id, rules[rule_id]["details"])
     assert rules["DQ-N02"]["metric"] >= 5                     # spelling variants standardized
@@ -101,3 +101,38 @@ def test_rerunning_same_file_is_idempotent(clean_csv, env):
     n = con.execute("SELECT COUNT(*) FROM raw_observation").fetchone()[0]
     con.close()
     assert n == first["rows_source"]                          # raw rows stored only once
+
+
+def test_official_unavailable_values_do_not_trigger_the_gate(env):
+    frame = make_demo_frame()
+    mask = frame["Harvest disposition"].eq("Production (metric tonnes)") & (frame.index % 3 == 0)
+    frame.loc[mask, ["VALUE", "SYMBOL"]] = ["", ".."]               # about a third of production marked unavailable
+    path = env["tmp"] / "unavailable.csv"
+    frame.to_csv(path, index=False)
+    info = run(path, env)
+    assert info["rows_unavailable"] > 0
+    assert info["status"] != "FAILED_GATE", info["message"]
+    assert by_rule(info)["DQ-R01"]["status"] == "PASS"
+    assert by_rule(info)["DQ-M01"]["status"] == "PASS"                # gaps are explained by official markers
+    assert info["rows_source"] == info["rows_loaded"] + info["rows_reference_only"] + info["rows_rejected"]
+
+
+def test_year_missing_without_a_marker_is_an_unexplained_gap(env):
+    frame = make_demo_frame()
+    drop = (frame["Harvest disposition"].eq("Production (metric tonnes)") & frame["GEO"].eq("Ontario")
+            & frame["Type of crop"].eq("Barley") & frame["REF_DATE"].eq("2020"))
+    path = env["tmp"] / "gap.csv"
+    frame[~drop].to_csv(path, index=False)
+    rule = by_rule(run(path, env))["DQ-M01"]
+    assert rule["status"] == "WARN" and rule["metric"] == 1
+    assert "Ontario/Barley/production" in rule["details"]
+
+
+def test_yield_outlier_is_flagged_against_the_crops_own_median(env):
+    frame = make_demo_frame()
+    row = frame.index[frame["Harvest disposition"].eq("Average yield (kilograms per hectare)")][0]
+    frame.loc[row, "VALUE"] = "90000"
+    path = env["tmp"] / "outlier.csv"
+    frame.to_csv(path, index=False)
+    rule = by_rule(run(path, env))["DQ-O01"]
+    assert rule["status"] == "WARN" and rule["metric"] == 1

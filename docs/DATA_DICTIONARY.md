@@ -30,7 +30,7 @@ quality_flags, source_row, snapshot_id.
 
 | Table | Contents |
 |---|---|
-| audit_load_log | One row per run: label, snapshot, status, published, row counts, check counts, message |
+| audit_load_log | One row per run: label, snapshot, status, published, row counts (including rows_unavailable), check counts, message |
 | audit_dq_results | One row per check per run: rule, severity, status, metric, threshold, details |
 | audit_reject_summary | Rejected rows by reason per run |
 | audit_rejected_records | Every rejected row with its reason |

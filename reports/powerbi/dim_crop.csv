@@ -1,0 +1,50 @@
+crop_key,crop_name,needs_review
+1,Barley,false
+2,"Beans, all dry (white and coloured)",false
+3,"Beans, dry coloured",false
+4,"Beans, dry white",false
+5,Borage seed,false
+6,Buckwheat,false
+7,Canary seed,false
+8,Canola (rapeseed),false
+9,Caraway seed,false
+10,Chick peas,false
+11,Coriander seed,false
+12,Corn for grain,false
+13,Corn for silage,false
+14,Faba beans,false
+15,Flaxseed,false
+16,Hemp,false
+17,Lentils,false
+18,Mixed grains,false
+19,Mustard seed,false
+20,Oats,false
+21,"Peas, dry",false
+22,"Rye, all",false
+23,"Rye, all including fall rye remaining",false
+24,"Rye, fall remaining",false
+25,"Rye, fall seeded in previous fall",false
+26,"Rye, spring",false
+27,Safflower,false
+28,Soybeans,false
+29,Sugar beets,false
+30,Summerfallow,false
+31,Sunflower seed,false
+32,Tame hay,false
+33,Triticale,false
+34,"Wheat, Canada Eastern Red Spring (CERS)",false
+35,"Wheat, Canada Northern Hard Red (CNHR)",false
+36,"Wheat, Canada Prairie Spring Red (CPSR) and Canada Prairie Spring White (CPSW)",false
+37,"Wheat, Canada Western Extra Strong (CWES)",false
+38,"Wheat, Canada Western Hard White Spring (CWHWS)",false
+39,"Wheat, Canada Western Red Spring (CWRS)",false
+40,"Wheat, Canada Western Soft White Spring (CWSWS)",false
+41,"Wheat, Canada Western Special Purpose (CWSP)",false
+42,"Wheat, all",false
+43,"Wheat, all excluding durum wheat",false
+44,"Wheat, all including winter wheat remaining",false
+45,"Wheat, durum",false
+46,"Wheat, other spring",false
+47,"Wheat, spring",false
+48,"Wheat, winter remaining",false
+49,"Wheat, winter seeded in fall",false

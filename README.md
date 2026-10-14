@@ -67,8 +67,8 @@ Full detail is in [docs/DQ_RULES.md](docs/DQ_RULES.md).
 | Group | Checks |
 |---|---|
 | Row level (rows are rejected with a reason) | invalid year, missing dimension, unmapped measure, missing value, non-numeric value, negative value, duplicate key |
-| Standardization (rows kept and flagged) | inconsistent crop spellings, crop names not in the catalog, StatCan "use with caution" flag, implausible yields |
-| Dataset level | schema contract, row conservation, completeness of each series, production = area x yield, hectares vs acres, provinces vs Canada total, release-to-release revisions, freshness |
+| Standardization (rows kept and flagged) | inconsistent crop spellings, crop names not in the catalog, StatCan "use with caution" flag |
+| Dataset level | schema contract, row conservation, completeness of each series (official gaps explained), yields vs each crop's median, production = area x yield, hectares vs acres, provinces vs Canada total, release-to-release revisions, freshness |
 | Reconciliation (blocking) | staging equals warehouse (counts and sums); published report table equals warehouse |
 
 Blocking checks stop publishing and keep the previous data in place.
